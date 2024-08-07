@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "git-remote-s3-python"
+version = "0.1.2"
+description = "A git remote helper for Amazon S3"
+authors = ["Massimiliano Angelino <angmas@amazon.com>"]
+
+license = "Apache-2.0"
+readme = "README.md"
+
+[tool.poetry.scripts]
+git-remote-s3 = "git_remote_s3_python.main:main"
+
+
+[tool.poetry.dependencies]
+python = ">3.9"
+boto3 = "^1.34.155"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
