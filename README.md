@@ -10,12 +10,10 @@ It also provide an implementation of the [git-lfs custom transfer](https://githu
 
 `git-remote-s3` is a Python script and works with any Python version >= 3.9.
 
-Clone the repo or download the file [git_remote_s3_python-0.1.6-py3-none-any.whl](https://gitlab.aws.dev/angmas/git-remote-s3-python/-/raw/main/dist/git_remote_s3_python-0.1.6-py3-none-any.whl?ref_type=heads).
-
-Then run:
+Run:
 
 ```
-pip install git_remote_s3_python-0.1.6-py3-none-any.whl
+pip install git-remote-s3
 ```
 
 ## Prerequisites
