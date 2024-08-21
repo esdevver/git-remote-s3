@@ -253,7 +253,7 @@ class S3Remote:
             self.cmd_capabilities()
         elif cmd == "\n":
             logger.info("empty line")
-            if self.mode == Mode.PUSH and not self.push_cmds:
+            if self.mode == Mode.PUSH and self.push_cmds:
                 logger.info(f"pushing {self.push_cmds}")
                 push_res = [self.cmd_push(c) for c in self.push_cmds]
                 for res in push_res:
