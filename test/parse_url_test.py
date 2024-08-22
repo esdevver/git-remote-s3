@@ -1,4 +1,4 @@
-from git_remote_s3_python import parse_git_url
+from git_remote_s3 import parse_git_url
 
 
 def test_parse_url_trailing_slash_no_profile():

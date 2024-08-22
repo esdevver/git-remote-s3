@@ -1,12 +1,12 @@
 from mock import Mock, patch
 import subprocess
 from io import StringIO, BytesIO
-from git_remote_s3_python import S3Remote
+from git_remote_s3 import S3Remote
 import sys
 import boto3
 import tempfile
 import datetime
-from git_remote_s3_python import git
+from git_remote_s3 import git
 import botocore
 
 SHA1 = "c105d19ba64965d2c9d3d3246e7269059ef8bb8a"
@@ -137,9 +137,9 @@ def test_cmd_list_protected_branch(session_client_mock, stdout_mock):
     )
 
 
-@patch("git_remote_s3_python.git.is_ancestor")
-@patch("git_remote_s3_python.git.rev_parse")
-@patch("git_remote_s3_python.git.bundle")
+@patch("git_remote_s3.git.is_ancestor")
+@patch("git_remote_s3.git.rev_parse")
+@patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_no_force_unprotected_ancestor(
     session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock
@@ -162,9 +162,9 @@ def test_cmd_push_no_force_unprotected_ancestor(
     assert res == ("ok refs/heads/main\n")
 
 
-@patch("git_remote_s3_python.git.is_ancestor")
-@patch("git_remote_s3_python.git.rev_parse")
-@patch("git_remote_s3_python.git.bundle")
+@patch("git_remote_s3.git.is_ancestor")
+@patch("git_remote_s3.git.rev_parse")
+@patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_no_force_unprotected_no_ancestor(
     session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock
@@ -188,9 +188,9 @@ def test_cmd_push_no_force_unprotected_no_ancestor(
     assert res.startswith("error")
 
 
-@patch("git_remote_s3_python.git.is_ancestor")
-@patch("git_remote_s3_python.git.rev_parse")
-@patch("git_remote_s3_python.git.bundle")
+@patch("git_remote_s3.git.is_ancestor")
+@patch("git_remote_s3.git.rev_parse")
+@patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_force_no_ancestor(
     session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock
@@ -213,9 +213,9 @@ def test_cmd_push_force_no_ancestor(
     assert res.startswith("ok")
 
 
-@patch("git_remote_s3_python.git.is_ancestor")
-@patch("git_remote_s3_python.git.rev_parse")
-@patch("git_remote_s3_python.git.bundle")
+@patch("git_remote_s3.git.is_ancestor")
+@patch("git_remote_s3.git.rev_parse")
+@patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_force_no_ancestor_protected(
     session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock
@@ -238,9 +238,9 @@ def test_cmd_push_force_no_ancestor_protected(
     assert res.startswith("error")
 
 
-@patch("git_remote_s3_python.git.is_ancestor")
-@patch("git_remote_s3_python.git.rev_parse")
-@patch("git_remote_s3_python.git.bundle")
+@patch("git_remote_s3.git.is_ancestor")
+@patch("git_remote_s3.git.rev_parse")
+@patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_empty_bucket(
     session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock
@@ -264,9 +264,9 @@ def test_cmd_push_empty_bucket(
     assert res.startswith("ok")
 
 
-@patch("git_remote_s3_python.git.is_ancestor")
-@patch("git_remote_s3_python.git.rev_parse")
-@patch("git_remote_s3_python.git.bundle")
+@patch("git_remote_s3.git.is_ancestor")
+@patch("git_remote_s3.git.rev_parse")
+@patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_multiple_heads(
     session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock
@@ -290,7 +290,7 @@ def test_cmd_push_multiple_heads(
 
 
 @patch("sys.stdout", new_callable=StringIO)
-@patch("git_remote_s3_python.git.unbundle")
+@patch("git_remote_s3.git.unbundle")
 @patch("boto3.Session.client")
 def test_cmd_fetch(session_client_mock, unbundle_mock, stdout_mock):
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
@@ -304,7 +304,7 @@ def test_cmd_fetch(session_client_mock, unbundle_mock, stdout_mock):
     assert stdout_mock.getvalue().startswith("ok")
 
 
-@patch("git_remote_s3_python.git.unbundle")
+@patch("git_remote_s3.git.unbundle")
 @patch("boto3.Session.client")
 def test_cmd_fetch(session_client_mock, unbundle_mock):
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
@@ -316,7 +316,7 @@ def test_cmd_fetch(session_client_mock, unbundle_mock):
     assert session_client_mock.return_value.get_object.call_count == 1
 
 
-@patch("git_remote_s3_python.git.unbundle")
+@patch("git_remote_s3.git.unbundle")
 @patch("boto3.Session.client")
 def test_cmd_fetch_same_ref(session_client_mock, unbundle_mock):
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")

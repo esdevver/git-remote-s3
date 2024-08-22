@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "git-remote-s3-python"
+name = "git-remote-s3"
 version = "0.1.12"
 description = "A git remote helper for Amazon S3"
 authors = ["Massimiliano Angelino <angmas@amazon.com>"]
@@ -8,9 +8,9 @@ license = "Apache-2.0"
 readme = "README.md"
 
 [tool.poetry.scripts]
-git-remote-s3 = "git_remote_s3_python.remote:main"
-git-lfs-s3 = "git_remote_s3_python.lfs:main"
-git-s3 = "git_remote_s3_python.manage:main"
+git-remote-s3 = "git_remote_s3.remote:main"
+git-lfs-s3 = "git_remote_s3.lfs:main"
+git-s3 = "git_remote_s3.manage:main"
 
 
 [tool.poetry.dependencies]
