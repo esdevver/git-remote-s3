@@ -285,11 +285,21 @@ def main():
             logger.info(f"cmd: {line}")
             s3remote.process_cmd(line)
 
-    except (BrokenPipeError, OSError):
+    except BrokenPipeError:
         logger.info("BrokenPipeError")
         devnull = os.open(os.devnull, os.O_WRONLY)
         os.dup2(devnull, sys.stdout.fileno())
         sys.exit(0)
+    except OSError as err:
+        # Broken pipe error on Windows
+        # see https://stackoverflow.com/questions/23688492/oserror-errno-22-invalid-argument-in-subprocess
+        if err.errno == 22:
+            logger.info("BrokenPipeError")
+            devnull = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(devnull, sys.stdout.fileno())
+            sys.exit(0)
+        else:
+            raise err
     except (
         ClientError,
         ProfileNotFound,
