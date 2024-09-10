@@ -13,7 +13,7 @@ import re
 import tempfile
 import os
 from git_remote_s3 import git
-from git_remote_s3.common import parse_git_url
+from .common import parse_git_url
 import botocore
 
 logger = logging.getLogger(__name__)
