@@ -285,7 +285,7 @@ def main():
             logger.info(f"cmd: {line}")
             s3remote.process_cmd(line)
 
-    except BrokenPipeError:
+    except (BrokenPipeError, OSError):
         logger.info("BrokenPipeError")
         devnull = os.open(os.devnull, os.O_WRONLY)
         os.dup2(devnull, sys.stdout.fileno())
