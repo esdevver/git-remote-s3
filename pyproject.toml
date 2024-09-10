@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "git-remote-s3"
-version = "0.1.15"
+version = "0.1.17"
 description = "A git remote helper for Amazon S3"
 authors = ["Massimiliano Angelino <angmas@amazon.com>"]
 
