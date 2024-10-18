@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023-present Amazon.com, Inc. or its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import sys
 import logging
 import json

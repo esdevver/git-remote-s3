@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023-present Amazon.com, Inc. or its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import boto3
 from .remote import parse_git_url
 import argparse
