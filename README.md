@@ -173,9 +173,16 @@ origin  s3://my-git-bucket/this-is-a-new-repo (push)
 
 ## Concurrent writes
 
-Due to the eventual consistency behavior of Amazon S3, there might be cases (albeit rare) where 2 or more `git push` are executed at the same time by different user with their own modification of the same branch.
+Due to the distributed nature of `git`, there might be cases (albeit rare) where 2 or more `git push` are executed at the same time by different user with their own modification of the same branch.
 
-The git command fetches the same remote ref for all the push commands and determines they are valid. It then invokes the `git-remote-s3` command which writes the bundle to the S3 bucket at the `refs/heads/<branch>` path, resulting in multiple bundles, one for each git push. The branch has now multiple head references, and any subsequent `git push` fails with the error:
+The git command executes the push in 2 steps:
+
+1. first it checks if the remote reference is the correct ancestor for the commit being pushed
+2. if that is correct it invokes the `git-remote-s3` command which writes the bundle to the S3 bucket at the `refs/heads/<branch>` path
+
+In case two (or more) `git push` command are executed at the same time from different clients, at step 1 the same valid ref is fetched, hence both clients proceed with step 2, resulting in multiple bundles being stored in S3.
+
+The branch has now multiple head references, and any subsequent `git push` fails with the error:
 
 ```
 error: dst refspec refs/heads/<branch>> matches more than one
