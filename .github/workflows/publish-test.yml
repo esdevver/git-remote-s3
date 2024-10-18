@@ -2,10 +2,8 @@ name: Test_Release
 
 on:
   push:
-    branches:
-      - dev
     tags:
-      - "v*.*.*"
+      - test_v*.*.*
 
 permissions:
   contents: read
