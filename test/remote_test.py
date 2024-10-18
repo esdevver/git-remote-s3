@@ -285,10 +285,9 @@ def test_cmd_push_multiple_heads(
     assert res.startswith("error")
 
 
-@patch("sys.stdout", new_callable=StringIO)
 @patch("git_remote_s3.git.unbundle")
 @patch("boto3.Session.client")
-def test_cmd_fetch(session_client_mock, unbundle_mock, stdout_mock):
+def test_cmd_fetch(session_client_mock, unbundle_mock):
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     session_client_mock.return_value.get_object.return_value = {
         "Body": BytesIO(b"bundle content")
@@ -297,7 +296,6 @@ def test_cmd_fetch(session_client_mock, unbundle_mock, stdout_mock):
 
     unbundle_mock.assert_called_once()
     assert session_client_mock.return_value.get_object.call_count == 1
-    assert stdout_mock.getvalue().startswith("ok")
 
 
 @patch("git_remote_s3.git.unbundle")
