@@ -1,12 +1,8 @@
-from mock import Mock, patch
-import subprocess
+from mock import patch
 from io import StringIO, BytesIO
 from git_remote_s3 import S3Remote
-import sys
-import boto3
 import tempfile
 import datetime
-from git_remote_s3 import git
 import botocore
 
 SHA1 = "c105d19ba64965d2c9d3d3246e7269059ef8bb8a"
