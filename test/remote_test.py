@@ -302,18 +302,6 @@ def test_cmd_fetch(session_client_mock, unbundle_mock, stdout_mock):
 
 @patch("git_remote_s3.git.unbundle")
 @patch("boto3.Session.client")
-def test_cmd_fetch(session_client_mock, unbundle_mock):
-    s3_remote = S3Remote(None, "test_bucket", "test_prefix")
-    session_client_mock.return_value.get_object.return_value = {
-        "Body": BytesIO(b"bundle content")
-    }
-    s3_remote.cmd_fetch(f"fetch {SHA1} refs/heads/main")
-    unbundle_mock.assert_called_once()
-    assert session_client_mock.return_value.get_object.call_count == 1
-
-
-@patch("git_remote_s3.git.unbundle")
-@patch("boto3.Session.client")
 def test_cmd_fetch_same_ref(session_client_mock, unbundle_mock):
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     session_client_mock.return_value.get_object.return_value = {

@@ -105,7 +105,7 @@ class S3Remote:
 
         contents = self.get_bundles_for_ref(remote_ref)
         if len(contents) > 1:
-            return f'error {remote_ref} "multiple bundles exists on server. Run git-s3 doctor to fix."?\n'
+            return f'error {remote_ref} "multiple bundles exists on server. Run git-s3 doctor to fix."?\n'  # noqa: B950
 
         remote_to_remove = contents[0]["Key"] if len(contents) == 1 else None
 
@@ -238,7 +238,7 @@ class S3Remote:
         sys.stdout.write("\n")
         sys.stdout.flush()
 
-    def process_cmd(self, cmd: str):
+    def process_cmd(self, cmd: str):  # noqa: C901
         if cmd.startswith("fetch"):
             self.cmd_fetch(cmd.strip())
         elif cmd.startswith("push"):
@@ -296,7 +296,7 @@ def main():
         sys.exit(0)
     except OSError as err:
         # Broken pipe error on Windows
-        # see https://stackoverflow.com/questions/23688492/oserror-errno-22-invalid-argument-in-subprocess
+        # see https://stackoverflow.com/questions/23688492/oserror-errno-22-invalid-argument-in-subprocess # noqa: B950
         if err.errno == 22:
             logger.info("BrokenPipeError")
             devnull = os.open(os.devnull, os.O_WRONLY)

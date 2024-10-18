@@ -99,7 +99,8 @@ def get_remote_url(remote: str) -> str:
     return url
 
 
-# validate refname according to https://github.com/git/git/blob/406f326d271e0bacecdb00425422c5fa3f314930/refs.c#L170
+# validate refname according to
+# https://github.com/git/git/blob/406f326d271e0bacecdb00425422c5fa3f314930/refs.c#L170
 def validate_ref_name(name: str) -> bool:
     return (
         re.search(

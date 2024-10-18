@@ -32,9 +32,10 @@ class Doctor:
             for ref in repos[r]["refs"].keys():
                 if repos[r]["HEAD"] == ref:
                     head_ref = ref
-                print(
-                    f" { '*' if repos[r]['refs'][ref]['protected'] else '' } {ref}: {'Ok' if len(repos[r]['refs'][ref]['bundles'])==1 else 'Multiple refs'}"
-                )
+                ref_value = repos[r]["refs"][ref]
+                part_1 = "*" if ref_value["protected"] else ""
+                part_2 = "Ok" if len(ref_value["bundles"]) == 1 else "Multiple refs"
+                print(f" {part_1} {ref}: {part_2}")
             if head_ref == "Invalid":
                 repos[r]["HEAD"] = head_ref
             print(f"  HEAD: {head_ref}")

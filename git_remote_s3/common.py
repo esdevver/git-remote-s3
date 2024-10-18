@@ -12,7 +12,8 @@ def parse_git_url(url: str) -> tuple[str, str, str]:
         url (str): the URI to parse
 
     Returns:
-        tuple[str, str, str]: prefix, bucket and profile extracted from the URI or None, None, None if the URI is invalid
+        tuple[str, str, str]: prefix, bucket and profile extracted from the URI or
+        None, None, None if the URI is invalid
     """
     if url is None:
         return None, None, None

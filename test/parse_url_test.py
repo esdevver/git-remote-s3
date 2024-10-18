@@ -46,7 +46,7 @@ def test_parse_url_no_prefix_no_profile():
     profile, bucket, prefix = parse_git_url(url)
     assert bucket == "bucket-name"
     assert profile is None
-    assert prefix == None
+    assert prefix is None
 
 
 def test_parse_url_not_valid():

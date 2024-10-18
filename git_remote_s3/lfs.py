@@ -153,7 +153,7 @@ def install():
     sys.stdout.flush()
 
 
-def main():
+def main():  # noqa: C901
     if len(sys.argv) > 1:
         if "install" == sys.argv[1]:
             install()
@@ -189,7 +189,8 @@ def main():
         logger.debug(line)
         event = json.loads(line)
         if event["event"] == "init":
-            # This is just another precaution but not strictly necessary since git would already have validated the origin name
+            # This is just another precaution but not strictly necessary since git would
+            # already have validated the origin name
             if not validate_ref_name(event["remote"]):
                 logger.error(f"invalid ref {event['remote']}")
                 sys.stdout.write("{}\n")
