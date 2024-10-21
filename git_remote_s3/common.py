@@ -17,7 +17,7 @@ def parse_git_url(url: str) -> tuple[str, str, str]:
     """
     if url is None:
         return None, None, None
-    m = re.match(r"s3://([\w\-\+]{3,}@)?([a-z0-9][a-z0-9\.-]{2,62})/?(.+)?", url)
+    m = re.match(r"s3://([^@]+@)?([a-z0-9][a-z0-9\.-]{2,62})/?(.+)?", url)
     if m is None or len(m.groups()) != 3:
         return None, None, None
     profile, bucket, prefix = m.groups()
