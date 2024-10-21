@@ -115,7 +115,7 @@ All git operations that do not rely on communication with the server should work
 
 # LFS
 
-To use LFS you need to first install git-lfs. You can refer to the [official documentation]((https://git-lfs.com/) on how to do this on your system.
+To use LFS you need to first install git-lfs. You can refer to the [official documentation](https://git-lfs.com/) on how to do this on your system.
 
 Next, you need enable the S3 integration by running the following command in the repo folder:
 
