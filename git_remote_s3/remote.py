@@ -25,6 +25,12 @@ if "remote" in __name__:
     logging.basicConfig(level=logging.ERROR, stream=sys.stderr)
 
 
+class BucketNotFoundError(Exception):
+    def __init__(self, bucket):
+        self.bucket = bucket
+        super().__init__(f"Bucket {bucket} not found.")
+
+
 class Mode:
     FETCH = "fetch"
     PUSH = "push"
@@ -40,6 +46,12 @@ class S3Remote:
         else:
             self.session = boto3.Session()
         self.s3 = self.session.client("s3")
+        try:
+            self.s3.head_bucket(Bucket=bucket)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                raise BucketNotFoundError(bucket)
+            raise e
         self.bucket = bucket
         self.mode = None
         self.fetched_refs = []
@@ -316,5 +328,9 @@ def main():
         UnknownCredentialError,
     ) as e:
         sys.stderr.write(f"fatal: invalid credentials {e}\n")
+        sys.stderr.flush()
+        sys.exit(1)
+    except BucketNotFoundError as e:
+        sys.stderr.write(f"fatal: bucket not found {e.bucket}\n")
         sys.stderr.flush()
         sys.exit(1)
