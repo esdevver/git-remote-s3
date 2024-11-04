@@ -1,6 +1,8 @@
+import botocore.client
 from mock import patch
 from io import StringIO, BytesIO
 from git_remote_s3 import S3Remote
+from botocore.exceptions import ClientError
 import tempfile
 import datetime
 import botocore
@@ -8,6 +10,8 @@ import botocore
 SHA1 = "c105d19ba64965d2c9d3d3246e7269059ef8bb8a"
 SHA2 = "c105d19ba64965d2c9d3d3246e7269059ef8bb8b"
 INVALID_SHA = "z45"
+BUNDLE_SUFFIX = ".bundle"
+MOCK_BUNDLE_CONTENT = b"MOCK_BUNDLE_CONTENT"
 
 
 def create_list_objects_v2_mock(
@@ -143,9 +147,9 @@ def test_cmd_push_no_force_unprotected_ancestor(
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     rev_parse_mock.return_value = SHA1
     temp_dir = tempfile.mkdtemp("test_temp")
-    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=".bundle")
+    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=BUNDLE_SUFFIX)
     with open(temp_file.name, "wb") as f:
-        f.write(b"bundle content")
+        f.write(MOCK_BUNDLE_CONTENT)
     bundle_mock.return_value = temp_file.name
     session_client_mock.return_value.list_objects_v2.side_effect = (
         create_list_objects_v2_mock(protected=True, shas=[SHA1])
@@ -168,9 +172,9 @@ def test_cmd_push_no_force_unprotected_no_ancestor(
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     rev_parse_mock.return_value = SHA1
     temp_dir = tempfile.mkdtemp("test_temp")
-    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=".bundle")
+    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=BUNDLE_SUFFIX)
     with open(temp_file.name, "wb") as f:
-        f.write(b"bundle content")
+        f.write(MOCK_BUNDLE_CONTENT)
     bundle_mock.return_value = temp_file.name
     session_client_mock.return_value.list_objects_v2.side_effect = (
         create_list_objects_v2_mock(shas=[SHA2])
@@ -194,9 +198,9 @@ def test_cmd_push_force_no_ancestor(
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     rev_parse_mock.return_value = SHA1
     temp_dir = tempfile.mkdtemp("test_temp")
-    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=".bundle")
+    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=BUNDLE_SUFFIX)
     with open(temp_file.name, "wb") as f:
-        f.write(b"bundle content")
+        f.write(MOCK_BUNDLE_CONTENT)
     bundle_mock.return_value = temp_file.name
     session_client_mock.return_value.list_objects_v2.side_effect = (
         create_list_objects_v2_mock(shas=[SHA2])
@@ -219,9 +223,9 @@ def test_cmd_push_force_no_ancestor_protected(
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     rev_parse_mock.return_value = SHA1
     temp_dir = tempfile.mkdtemp("test_temp")
-    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=".bundle")
+    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=BUNDLE_SUFFIX)
     with open(temp_file.name, "wb") as f:
-        f.write(b"bundle content")
+        f.write(MOCK_BUNDLE_CONTENT)
     bundle_mock.return_value = temp_file.name
     session_client_mock.return_value.list_objects_v2.side_effect = (
         create_list_objects_v2_mock(protected=True, shas=[SHA2])
@@ -244,14 +248,15 @@ def test_cmd_push_empty_bucket(
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     rev_parse_mock.return_value = SHA1
     temp_dir = tempfile.mkdtemp("test_temp")
-    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=".bundle")
+    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=BUNDLE_SUFFIX)
     with open(temp_file.name, "wb") as f:
-        f.write(b"bundle content")
+        f.write(MOCK_BUNDLE_CONTENT)
     bundle_mock.return_value = temp_file.name
-    session_client_mock.return_value.list_objects_v2.return_value = {
-        "NextContinuationToken": None,
-        "Contents": [],
-    }
+
+    session_client_mock.return_value.head_object.side_effect = ClientError(
+        {"Error": {"Code": "NoSuchKey"}}, "head_object"
+    )
+
     is_ancestor_mock.return_value = False
     assert s3_remote.s3 == session_client_mock.return_value
     res = s3_remote.cmd_push("push refs/heads/main:refs/heads/main")
@@ -270,9 +275,9 @@ def test_cmd_push_multiple_heads(
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     rev_parse_mock.return_value = SHA1
     temp_dir = tempfile.mkdtemp("test_temp")
-    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=".bundle")
+    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=BUNDLE_SUFFIX)
     with open(temp_file.name, "wb") as f:
-        f.write(b"bundle content")
+        f.write(MOCK_BUNDLE_CONTENT)
     bundle_mock.return_value = temp_file.name
     session_client_mock.return_value.list_objects_v2.side_effect = (
         create_list_objects_v2_mock(shas=[SHA1, SHA2])
@@ -290,7 +295,7 @@ def test_cmd_push_multiple_heads(
 def test_cmd_fetch(session_client_mock, unbundle_mock):
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     session_client_mock.return_value.get_object.return_value = {
-        "Body": BytesIO(b"bundle content")
+        "Body": BytesIO(MOCK_BUNDLE_CONTENT)
     }
     s3_remote.cmd_fetch(f"fetch {SHA1} refs/heads/main")
 
@@ -303,7 +308,7 @@ def test_cmd_fetch(session_client_mock, unbundle_mock):
 def test_cmd_fetch_same_ref(session_client_mock, unbundle_mock):
     s3_remote = S3Remote(None, "test_bucket", "test_prefix")
     session_client_mock.return_value.get_object.return_value = {
-        "Body": BytesIO(b"bundle content")
+        "Body": BytesIO(MOCK_BUNDLE_CONTENT)
     }
     s3_remote.cmd_fetch(f"fetch {SHA1} refs/heads/main")
     s3_remote.cmd_fetch(f"fetch {SHA1} refs/heads/main")

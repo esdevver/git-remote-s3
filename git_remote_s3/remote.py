@@ -25,6 +25,12 @@ if "remote" in __name__:
     logging.basicConfig(level=logging.ERROR, stream=sys.stderr)
 
 
+class BucketNotFoundError(Exception):
+    def __init__(self, bucket):
+        self.bucket = bucket
+        super().__init__(f"Bucket {bucket} not found.")
+
+
 class Mode:
     FETCH = "fetch"
     PUSH = "push"
@@ -40,6 +46,12 @@ class S3Remote:
         else:
             self.session = boto3.Session()
         self.s3 = self.session.client("s3")
+        try:
+            self.s3.head_bucket(Bucket=bucket)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                raise BucketNotFoundError(bucket)
+            raise e
         self.bucket = bucket
         self.mode = None
         self.fetched_refs = []
@@ -146,9 +158,10 @@ class S3Remote:
         Args:
             ref (str): The ref to which the remote HEAD should point to
         """
-        if not self.s3.list_objects_v2(
-            Bucket=self.bucket, Prefix=f"{self.prefix}/HEAD"
-        ).get("Contents", []):
+
+        try:
+            self.s3.head_object(Bucket=self.bucket, Key=f"{self.prefix}/HEAD")
+        except ClientError:
             self.s3.put_object(
                 Bucket=self.bucket,
                 Key=f"{self.prefix}/HEAD",
@@ -164,6 +177,9 @@ class S3Remote:
         Returns:
             list[str]: the list of bundle keys
         """
+
+        # We are not implementing pagination since there can be few objects (bundles)
+        # under a single Prefix
         return [
             c
             for c in self.s3.list_objects_v2(
@@ -309,5 +325,9 @@ def main():
         UnknownCredentialError,
     ) as e:
         sys.stderr.write(f"fatal: invalid credentials {e}\n")
+        sys.stderr.flush()
+        sys.exit(1)
+    except BucketNotFoundError as e:
+        sys.stderr.write(f"fatal: bucket not found {e.bucket}\n")
         sys.stderr.flush()
         sys.exit(1)
