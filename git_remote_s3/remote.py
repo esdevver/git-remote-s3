@@ -57,9 +57,6 @@ class S3Remote:
             contents.extend(res.get("Contents", []))
             next_token = res.get("NextContinuationToken", None)
 
-        contents = self.s3.list_objects_v2(Bucket=bucket, Prefix=prefix).get(
-            "Contents", []
-        )
         contents.sort(key=lambda x: x["LastModified"])
         contents.reverse()
 
