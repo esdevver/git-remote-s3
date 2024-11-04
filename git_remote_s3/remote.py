@@ -149,9 +149,10 @@ class S3Remote:
         Args:
             ref (str): The ref to which the remote HEAD should point to
         """
-        if not self.s3.list_objects_v2(
-            Bucket=self.bucket, Prefix=f"{self.prefix}/HEAD"
-        ).get("Contents", []):
+
+        try:
+            self.s3.head_object(Bucket=self.bucket, Key=f"{self.prefix}/HEAD")
+        except ClientError:
             self.s3.put_object(
                 Bucket=self.bucket,
                 Key=f"{self.prefix}/HEAD",
@@ -167,6 +168,9 @@ class S3Remote:
         Returns:
             list[str]: the list of bundle keys
         """
+
+        # We are not implementing pagination since there can be few objects (bundles)
+        # under a single Prefix
         return [
             c
             for c in self.s3.list_objects_v2(
