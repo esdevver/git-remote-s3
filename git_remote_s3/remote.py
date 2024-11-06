@@ -101,15 +101,36 @@ class S3Remote:
             if os.path.exists(f"{temp_dir}/{sha}.bundle"):
                 os.remove(f"{temp_dir}/{sha}.bundle")
 
-    def cmd_push(self, args: str):
+    def remove_remote_ref(self, remote_ref: str) -> str:
+        logger.info(f"Removing remote ref {remote_ref}")
+        try:
+            objects_to_delete = self.s3.list_objects_v2(
+                Bucket=self.bucket, Prefix=f"{self.prefix}/{remote_ref}"
+            ).get("Contents", [])
+            if len(objects_to_delete) == 1:
+                for object in objects_to_delete:
+                    self.s3.delete_object(Bucket=self.bucket, Key=object["Key"])
+                return f"ok {remote_ref}\n"
+            else:
+                return f"error {remote_ref} not found\n"
+
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                logger.info(f"fatal: {remote_ref} not found\n")
+                return f"error {remote_ref} not found\n"
+            raise e
+
+    def cmd_push(self, args: str) -> str:
         force_push = False
         local_ref, remote_ref = args.split(" ")[1].split(":")
+        if not local_ref:
+            return self.remove_remote_ref(remote_ref)
         if local_ref.startswith("+"):
             force_push = not self.is_protected(remote_ref)
             logger.info(f"Force push {force_push}")
             local_ref = local_ref[1:]
 
-        logger.info(f"push {local_ref} {remote_ref}")
+        logger.info(f"push !{local_ref}! !{remote_ref}!")
         temp_dir = tempfile.mkdtemp(prefix="git_remote_s3_push_")
 
         contents = self.get_bundles_for_ref(remote_ref)
