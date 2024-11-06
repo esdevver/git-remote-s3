@@ -334,3 +334,43 @@ def test_cmd_capabilities(session_client_mock, stdout_mock):
     assert "fetch" in stdout_mock.getvalue()
     assert "option" in stdout_mock.getvalue()
     assert "push" in stdout_mock.getvalue()
+
+
+@patch("boto3.Session.client")
+def test_cmd_push_delete(session_client_mock):
+    s3_remote = S3Remote(None, "test_bucket", "test_prefix")
+
+    session_client_mock.return_value.list_objects_v2.return_value = {
+        "Contents": [
+            {
+                "Key": f"test_prefix/refs/heads/main/{SHA1}.bundle",
+                "LastModified": datetime.datetime.now(),
+            }
+        ]
+    }
+    assert s3_remote.s3 == session_client_mock.return_value
+    res = s3_remote.cmd_push("push :refs/heads/main")
+    assert session_client_mock.return_value.delete_object.call_count == 1
+    assert res == ("ok refs/heads/main\n")
+
+
+@patch("boto3.Session.client")
+def test_cmd_push_delete_fails_with_multiple_heads(session_client_mock):
+    s3_remote = S3Remote(None, "test_bucket", "test_prefix")
+
+    session_client_mock.return_value.list_objects_v2.return_value = {
+        "Contents": [
+            {
+                "Key": f"test_prefix/refs/heads/main/{SHA1}.bundle",
+                "LastModified": datetime.datetime.now(),
+            },
+            {
+                "Key": f"test_prefix/refs/heads/main/{SHA2}.bundle",
+                "LastModified": datetime.datetime.now(),
+            },
+        ]
+    }
+    assert s3_remote.s3 == session_client_mock.return_value
+    res = s3_remote.cmd_push("push :refs/heads/main")
+    assert session_client_mock.return_value.delete_object.call_count == 0
+    assert res.startswith("error")
