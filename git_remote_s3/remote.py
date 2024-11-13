@@ -37,7 +37,8 @@ class Mode:
 
 
 class S3Remote:
-    def __init__(self, profile, bucket, prefix):
+    def __init__(self, uri_scheme, profile, bucket, prefix):
+        self.uri_scheme = uri_scheme
         self.profile = profile
         self.bucket = bucket
         self.prefix = prefix
@@ -146,17 +147,6 @@ class S3Remote:
                 if not force_push and not git.is_ancestor(remote_sha, sha):
                     return f'error {remote_ref} "remote ref is not ancestor of {local_ref}."?\n'
 
-            # Create and push a zip archive next to the bundle file
-            # Example use-case: Repo on S3 as Source for AWS CodePipeline
-            temp_file_archive = git.archive(folder=temp_dir, ref=local_ref)
-            with open(temp_file_archive, "rb") as f:
-                self.s3.put_object(
-                    Bucket=self.bucket,
-                    Key=f"{self.prefix}/{remote_ref}/repo.zip",
-                    Body=f,
-                )
-            logger.info(f"pushed {temp_file_archive} to {remote_ref}/repo.zip")
-
             temp_file = git.bundle(folder=temp_dir, sha=sha, ref=local_ref)
 
             with open(temp_file, "rb") as f:
@@ -169,6 +159,18 @@ class S3Remote:
             logger.info(f"pushed {temp_file} to {remote_ref}")
             if remote_to_remove:
                 self.s3.delete_object(Bucket=self.bucket, Key=remote_to_remove)
+
+            if self.uri_scheme == "s3+zip":
+                # Create and push a zip archive next to the bundle file
+                # Example use-case: Repo on S3 as Source for AWS CodePipeline
+                temp_file_archive = git.archive(folder=temp_dir, ref=local_ref)
+                with open(temp_file_archive, "rb") as f:
+                    self.s3.put_object(
+                        Bucket=self.bucket,
+                        Key=f"{self.prefix}/{remote_ref}/repo.zip",
+                        Body=f,
+                    )
+                logger.info(f"pushed {temp_file_archive} to {remote_ref}/repo.zip")
 
             return f"ok {remote_ref}\n"
         except git.GitError:
@@ -319,14 +321,14 @@ class S3Remote:
 def main():
     logger.info(sys.argv)
     remote = sys.argv[2]
-    profile, bucket, prefix = parse_git_url(remote)
+    uri_scheme, profile, bucket, prefix = parse_git_url(remote)
     if bucket is None or prefix is None:
         sys.stderr.write(
             f"fatal: invalid remote '{remote}'. You need to have a bucket and a prefix.\n"
         )
         sys.exit(1)
     try:
-        s3remote = S3Remote(profile=profile, bucket=bucket, prefix=prefix)
+        s3remote = S3Remote(uri_scheme=uri_scheme, profile=profile, bucket=bucket, prefix=prefix)
         while True:
             line = sys.stdin.readline()
             if not line:

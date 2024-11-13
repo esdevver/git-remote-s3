@@ -54,7 +54,7 @@ def write_error_event(*, oid: str, error: str, flush=False):
 
 class LFSProcess:
     def __init__(self, s3uri: str):
-        profile, bucket, prefix = parse_git_url(s3uri)
+        uri_scheme, profile, bucket, prefix = parse_git_url(s3uri)
         if bucket is None or prefix is None:
             logger.error(f"s3 uri {s3uri} is invalid")
             error_event = {

@@ -220,7 +220,7 @@ def main():
         sys.stderr.flush()
         sys.exit(1)
 
-    profile, bucket, prefix = parse_git_url(remote_url)
+    uri_scheme, profile, bucket, prefix = parse_git_url(remote_url)
     try:
         if args.command == "doctor":
             doctor = Doctor(profile, bucket, prefix, args.delete_bundle)
