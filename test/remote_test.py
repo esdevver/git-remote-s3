@@ -157,7 +157,7 @@ def test_cmd_push_no_force_unprotected_ancestor(
     is_ancestor_mock.return_value = True
     assert s3_remote.s3 == session_client_mock.return_value
     res = s3_remote.cmd_push("push refs/heads/main:refs/heads/main")
-    assert session_client_mock.return_value.put_object.call_count == 1
+    assert session_client_mock.return_value.put_object.call_count == 2
     assert session_client_mock.return_value.delete_object.call_count == 1
     assert res == ("ok refs/heads/main\n")
 
@@ -208,7 +208,7 @@ def test_cmd_push_force_no_ancestor(
     is_ancestor_mock.return_value = False
     assert s3_remote.s3 == session_client_mock.return_value
     res = s3_remote.cmd_push("push +refs/heads/main:refs/heads/main")
-    assert session_client_mock.return_value.put_object.call_count == 1
+    assert session_client_mock.return_value.put_object.call_count == 2
     assert session_client_mock.return_value.delete_object.call_count == 1
     assert res.startswith("ok")
 
@@ -260,7 +260,7 @@ def test_cmd_push_empty_bucket(
     is_ancestor_mock.return_value = False
     assert s3_remote.s3 == session_client_mock.return_value
     res = s3_remote.cmd_push("push refs/heads/main:refs/heads/main")
-    assert session_client_mock.return_value.put_object.call_count == 2
+    assert session_client_mock.return_value.put_object.call_count == 3
     assert session_client_mock.return_value.delete_object.call_count == 0
     assert res.startswith("ok")
 

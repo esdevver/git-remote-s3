@@ -146,6 +146,17 @@ class S3Remote:
                 if not force_push and not git.is_ancestor(remote_sha, sha):
                     return f'error {remote_ref} "remote ref is not ancestor of {local_ref}."?\n'
 
+            # Create and push a zip archive next to the bundle file
+            # Example use-case: Repo on S3 as Source for AWS CodePipeline
+            temp_file_archive = git.archive(folder=temp_dir, ref=local_ref)
+            with open(temp_file_archive, "rb") as f:
+                self.s3.put_object(
+                    Bucket=self.bucket,
+                    Key=f"{self.prefix}/{remote_ref}/repo.zip",
+                    Body=f,
+                )
+            logger.info(f"pushed {temp_file_archive} to {remote_ref}/repo.zip")
+
             temp_file = git.bundle(folder=temp_dir, sha=sha, ref=local_ref)
 
             with open(temp_file, "rb") as f:
@@ -206,7 +217,7 @@ class S3Remote:
             for c in self.s3.list_objects_v2(
                 Bucket=self.bucket, Prefix=f"{self.prefix}/{remote_ref}/"
             ).get("Contents", [])
-            if "PROTECTED#" not in c["Key"]
+            if "PROTECTED#" not in c["Key"] and ".zip" not in c["Key"]
         ]
 
     def is_protected(self, remote_ref):
