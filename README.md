@@ -90,6 +90,8 @@ git push --set-upstream origin main
 
 The remote HEAD is set to track the branch that has been pushed first to the remote repo. To change the remote HEAD branch, delete the HEAD object `s3://<bucket>/<prefix>/HEAD` and then run `git-remote-s3 doctor s3://<bucket>/<prefix>`.
 
+When you use `s3+zip://` instead of `s3://`, an additional zip archive named `repo.zip` is uploaded next to the `sha.bundle` file.  This is for example useful if you want to use the Repo as a S3 Source for AWS CodePipeline, which expects a `.zip` file. The path on S3 when you push to the `main` branch is for example `refs/heads/main/repo.zip`. See [How S3 remote work](#how-s3-remote-work) for more details about the bundle file.
+
 ## Clone a repo
 
 To clone the repo to another folder just use the normal git syntax using the s3 URI as remote:
