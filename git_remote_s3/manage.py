@@ -89,7 +89,7 @@ class Doctor:
         print(f"\nFix multiple bundles for repo {r} and ref {ref}")
         bundles = repos[r]["refs"][ref]["bundles"]
         for i, sha in enumerate(bundles):
-            print(f"{i+1}. {sha['sha']} {sha['lastModified']}")
+            print(f"{i + 1}. {sha['sha']} {sha['lastModified']}")
         while True:
             try:
                 i = int(input("Enter the number of the bundle to keep: "))
@@ -128,7 +128,7 @@ class Doctor:
         print(f"\nFix invalid HEAD for repo {r}")
         heads = [k for k in repos[r]["refs"].keys() if "heads" in k]
         for i, head in enumerate(heads):
-            print(f"{i+1}. {head.split('/')[-1]}")
+            print(f"{i + 1}. {head.split('/')[-1]}")
         while True:
             try:
                 i = int(input("Enter the number of the branch to use as head: "))

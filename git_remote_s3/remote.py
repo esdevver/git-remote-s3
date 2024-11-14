@@ -17,6 +17,7 @@ import re
 import tempfile
 import os
 from git_remote_s3 import git
+from .enums import UriScheme
 from .common import parse_git_url
 import botocore
 
@@ -108,7 +109,12 @@ class S3Remote:
             objects_to_delete = self.s3.list_objects_v2(
                 Bucket=self.bucket, Prefix=f"{self.prefix}/{remote_ref}"
             ).get("Contents", [])
-            if len(objects_to_delete) == 1:
+            if (
+                self.uri_scheme == UriScheme.S3
+                and len(objects_to_delete) == 1
+                or self.uri_scheme == UriScheme.S3_ZIP
+                and len(objects_to_delete) == 2
+            ):
                 for object in objects_to_delete:
                     self.s3.delete_object(Bucket=self.bucket, Key=object["Key"])
                 return f"ok {remote_ref}\n"
@@ -160,7 +166,7 @@ class S3Remote:
             if remote_to_remove:
                 self.s3.delete_object(Bucket=self.bucket, Key=remote_to_remove)
 
-            if self.uri_scheme == "s3+zip":
+            if self.uri_scheme == UriScheme.S3_ZIP:
                 # Create and push a zip archive next to the bundle file
                 # Example use-case: Repo on S3 as Source for AWS CodePipeline
                 temp_file_archive = git.archive(folder=temp_dir, ref=local_ref)
@@ -328,7 +334,9 @@ def main():
         )
         sys.exit(1)
     try:
-        s3remote = S3Remote(uri_scheme=uri_scheme, profile=profile, bucket=bucket, prefix=prefix)
+        s3remote = S3Remote(
+            uri_scheme=uri_scheme, profile=profile, bucket=bucket, prefix=prefix
+        )
         while True:
             line = sys.stdin.readline()
             if not line:
