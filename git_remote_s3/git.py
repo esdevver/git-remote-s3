@@ -11,6 +11,31 @@ class GitError(Exception):
     pass
 
 
+def archive(*, folder: str, ref: str) -> str:
+    """Archive the content of the folder into a repo.zip file
+
+    Args:
+        folder (str): the folder to archive
+        ref (str): the ref to archive
+
+    Returns:
+        str: the path to the archive file
+    """
+
+    file_path = f"{folder}/repo.zip"
+    result = subprocess.run(
+        ["git", "archive", "--format", "zip", "--output", file_path, ref],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+
+    if result.returncode == 0:
+        return file_path
+    else:
+        raise GitError(result.stderr.decode("utf8"))
+
+
 def bundle(*, folder: str, sha: str, ref: str) -> str:
     """Bundles the content of the folder into a sha.bundle file
 

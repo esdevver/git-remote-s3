@@ -17,6 +17,7 @@ import re
 import tempfile
 import os
 from git_remote_s3 import git
+from .enums import UriScheme
 from .common import parse_git_url
 import botocore
 
@@ -37,7 +38,8 @@ class Mode:
 
 
 class S3Remote:
-    def __init__(self, profile, bucket, prefix):
+    def __init__(self, uri_scheme, profile, bucket, prefix):
+        self.uri_scheme = uri_scheme
         self.profile = profile
         self.bucket = bucket
         self.prefix = prefix
@@ -107,7 +109,12 @@ class S3Remote:
             objects_to_delete = self.s3.list_objects_v2(
                 Bucket=self.bucket, Prefix=f"{self.prefix}/{remote_ref}"
             ).get("Contents", [])
-            if len(objects_to_delete) == 1:
+            if (
+                self.uri_scheme == UriScheme.S3
+                and len(objects_to_delete) == 1
+                or self.uri_scheme == UriScheme.S3_ZIP
+                and len(objects_to_delete) == 2
+            ):
                 for object in objects_to_delete:
                     self.s3.delete_object(Bucket=self.bucket, Key=object["Key"])
                 return f"ok {remote_ref}\n"
@@ -159,6 +166,18 @@ class S3Remote:
             if remote_to_remove:
                 self.s3.delete_object(Bucket=self.bucket, Key=remote_to_remove)
 
+            if self.uri_scheme == UriScheme.S3_ZIP:
+                # Create and push a zip archive next to the bundle file
+                # Example use-case: Repo on S3 as Source for AWS CodePipeline
+                temp_file_archive = git.archive(folder=temp_dir, ref=local_ref)
+                with open(temp_file_archive, "rb") as f:
+                    self.s3.put_object(
+                        Bucket=self.bucket,
+                        Key=f"{self.prefix}/{remote_ref}/repo.zip",
+                        Body=f,
+                    )
+                logger.info(f"pushed {temp_file_archive} to {remote_ref}/repo.zip")
+
             return f"ok {remote_ref}\n"
         except git.GitError:
             logger.info(f"fatal: {local_ref} not found\n")
@@ -206,7 +225,7 @@ class S3Remote:
             for c in self.s3.list_objects_v2(
                 Bucket=self.bucket, Prefix=f"{self.prefix}/{remote_ref}/"
             ).get("Contents", [])
-            if "PROTECTED#" not in c["Key"]
+            if "PROTECTED#" not in c["Key"] and ".zip" not in c["Key"]
         ]
 
     def is_protected(self, remote_ref):
@@ -308,14 +327,16 @@ class S3Remote:
 def main():
     logger.info(sys.argv)
     remote = sys.argv[2]
-    profile, bucket, prefix = parse_git_url(remote)
+    uri_scheme, profile, bucket, prefix = parse_git_url(remote)
     if bucket is None or prefix is None:
         sys.stderr.write(
             f"fatal: invalid remote '{remote}'. You need to have a bucket and a prefix.\n"
         )
         sys.exit(1)
     try:
-        s3remote = S3Remote(profile=profile, bucket=bucket, prefix=prefix)
+        s3remote = S3Remote(
+            uri_scheme=uri_scheme, profile=profile, bucket=bucket, prefix=prefix
+        )
         while True:
             line = sys.stdin.readline()
             if not line:
