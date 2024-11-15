@@ -79,6 +79,65 @@ def test_cmd_list(session_client_mock, stdout_mock):
 
 @patch("sys.stdout", new_callable=StringIO)
 @patch("boto3.Session.client")
+def test_list_refs(session_client_mock, stdout_mock):
+    s3_remote = S3Remote(UriScheme.S3, None, "test_bucket", "nested/test_prefix")
+
+    session_client_mock.return_value.list_objects_v2.return_value = {
+        "Contents": [
+            {
+                "Key": f"nested/test_prefix/refs/heads/{BRANCH}/{SHA1}.bundle",
+                "LastModified": datetime.datetime.now(),
+            },
+            {
+                "Key": f"nested/test_prefix/refs/tags/v1/{SHA1}.bundle",
+                "LastModified": datetime.datetime.now(),
+            },
+        ]
+    }
+
+    session_client_mock.assert_called_once_with("s3")
+    assert s3_remote.bucket == "test_bucket"
+    assert s3_remote.prefix == "nested/test_prefix"
+    assert s3_remote.s3 == session_client_mock.return_value
+    refs = s3_remote.list_refs(bucket=s3_remote.bucket, prefix=s3_remote.prefix)
+    assert len(refs) == 2
+    assert f"refs/heads/{BRANCH}/{SHA1}.bundle" in refs
+    assert f"refs/tags/v1/{SHA1}.bundle" in refs
+
+
+@patch("sys.stdout", new_callable=StringIO)
+@patch("boto3.Session.client")
+def test_cmd_list_nested_prefix(session_client_mock, stdout_mock):
+    s3_remote = S3Remote(UriScheme.S3, None, "test_bucket", "nested/test_prefix")
+
+    session_client_mock.return_value.list_objects_v2.return_value = {
+        "Contents": [
+            {
+                "Key": f"nested/test_prefix/refs/heads/{BRANCH}/{SHA1}.bundle",
+                "LastModified": datetime.datetime.now(),
+            },
+            {
+                "Key": "nested/test_prefix/HEAD",
+                "LastModified": datetime.datetime.now(),
+            },
+        ]
+    }
+    session_client_mock.assert_called_once_with("s3")
+    assert s3_remote.bucket == "test_bucket"
+    assert s3_remote.prefix == "nested/test_prefix"
+    assert s3_remote.s3 == session_client_mock.return_value
+    session_client_mock.return_value.get_object.return_value = {
+        "Body": BytesIO(b"refs/heads/%b" % str.encode(BRANCH))
+    }
+    s3_remote.cmd_list()
+    assert (
+        f"@refs/heads/{BRANCH} HEAD\n{SHA1} refs/heads/{BRANCH}\n\n"
+        == stdout_mock.getvalue()
+    )
+
+
+@patch("sys.stdout", new_callable=StringIO)
+@patch("boto3.Session.client")
 def test_cmd_list_no_head(session_client_mock, stdout_mock):
     s3_remote = S3Remote(UriScheme.S3, None, "test_bucket", "test_prefix")
 
