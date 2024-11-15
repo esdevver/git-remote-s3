@@ -75,7 +75,7 @@ class S3Remote:
         contents.reverse()
 
         objs = [
-            o["Key"][o["Key"].index("/") + 1 :]
+            o["Key"].removeprefix(prefix)[1:]
             for o in contents
             if o["Key"].startswith(prefix + "/refs") and o["Key"].endswith(".bundle")
         ]
