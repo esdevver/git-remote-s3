@@ -12,6 +12,8 @@ SHA2 = "c105d19ba64965d2c9d3d3246e7269059ef8bb8b"
 INVALID_SHA = "z45"
 BUNDLE_SUFFIX = ".bundle"
 MOCK_BUNDLE_CONTENT = b"MOCK_BUNDLE_CONTENT"
+ARCHIVE_SUFFIX = ".zip"
+MOCK_ARCHIVE_CONTENT = b"MOCK_ARCHIVE_CONTENT"
 BRANCH = "pytest"
 
 
@@ -70,7 +72,8 @@ def test_cmd_list(session_client_mock, stdout_mock):
     }
     s3_remote.cmd_list()
     assert (
-        f"@refs/heads/{BRANCH} HEAD\n{SHA1} refs/heads/{BRANCH}\n\n" == stdout_mock.getvalue()
+        f"@refs/heads/{BRANCH} HEAD\n{SHA1} refs/heads/{BRANCH}\n\n"
+        == stdout_mock.getvalue()
     )
 
 
@@ -134,7 +137,8 @@ def test_cmd_list_protected_branch(session_client_mock, stdout_mock):
     assert s3_remote.s3 == session_client_mock.return_value
     s3_remote.cmd_list()
     assert (
-        f"@refs/heads/{BRANCH} HEAD\n{SHA1} refs/heads/{BRANCH}\n\n" == stdout_mock.getvalue()
+        f"@refs/heads/{BRANCH} HEAD\n{SHA1} refs/heads/{BRANCH}\n\n"
+        == stdout_mock.getvalue()
     )
 
 
@@ -163,12 +167,13 @@ def test_cmd_push_no_force_unprotected_ancestor(
     assert res == (f"ok refs/heads/{BRANCH}\n")
 
 
+@patch("git_remote_s3.git.archive")
 @patch("git_remote_s3.git.is_ancestor")
 @patch("git_remote_s3.git.rev_parse")
 @patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_no_force_unprotected_ancestor_s3_zip(
-    session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock
+    session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock, archive_mock
 ):
     s3_remote = S3Remote(UriScheme.S3_ZIP, None, "test_bucket", "test_prefix")
     rev_parse_mock.return_value = SHA1
@@ -179,6 +184,10 @@ def test_cmd_push_no_force_unprotected_ancestor_s3_zip(
         f.write(MOCK_BUNDLE_CONTENT)
     bundle_mock.return_value = temp_file.name
 
+    temp_file_archive = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=ARCHIVE_SUFFIX)
+    with open(temp_file_archive.name, "wb") as f:
+        f.write(MOCK_ARCHIVE_CONTENT)
+    archive_mock.return_value = temp_file_archive.name
 
     session_client_mock.return_value.list_objects_v2.side_effect = (
         create_list_objects_v2_mock(protected=True, shas=[SHA1])
@@ -245,25 +254,37 @@ def test_cmd_push_force_no_ancestor(
     assert res.startswith("ok")
 
 
+@patch("git_remote_s3.git.archive")
 @patch("git_remote_s3.git.is_ancestor")
 @patch("git_remote_s3.git.rev_parse")
 @patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_force_no_ancestor_s3_zip(
-    session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock
+    session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock, archive_mock
 ):
     s3_remote = S3Remote(UriScheme.S3_ZIP, None, "test_bucket", "test_prefix")
+
     rev_parse_mock.return_value = SHA1
+
     temp_dir = tempfile.mkdtemp("test_temp")
     temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=BUNDLE_SUFFIX)
     with open(temp_file.name, "wb") as f:
         f.write(MOCK_BUNDLE_CONTENT)
     bundle_mock.return_value = temp_file.name
+
+    temp_file_archive = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=ARCHIVE_SUFFIX)
+    with open(temp_file_archive.name, "wb") as f:
+        f.write(MOCK_ARCHIVE_CONTENT)
+    archive_mock.return_value = temp_file_archive.name
+
     session_client_mock.return_value.list_objects_v2.side_effect = (
         create_list_objects_v2_mock(shas=[SHA2])
     )
+
     is_ancestor_mock.return_value = False
+
     assert s3_remote.s3 == session_client_mock.return_value
+
     res = s3_remote.cmd_push(f"push +refs/heads/{BRANCH}:refs/heads/{BRANCH}")
     assert session_client_mock.return_value.put_object.call_count == 2
     assert session_client_mock.return_value.delete_object.call_count == 1
@@ -322,27 +343,37 @@ def test_cmd_push_empty_bucket(
     assert res.startswith("ok")
 
 
+@patch("git_remote_s3.git.archive")
 @patch("git_remote_s3.git.is_ancestor")
 @patch("git_remote_s3.git.rev_parse")
 @patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_empty_bucket_s3_zip(
-    session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock
+    session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock, archive_mock
 ):
     s3_remote = S3Remote(UriScheme.S3_ZIP, None, "test_bucket", "test_prefix")
+
     rev_parse_mock.return_value = SHA1
+
     temp_dir = tempfile.mkdtemp("test_temp")
     temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=BUNDLE_SUFFIX)
     with open(temp_file.name, "wb") as f:
         f.write(MOCK_BUNDLE_CONTENT)
     bundle_mock.return_value = temp_file.name
 
+    temp_file_archive = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=ARCHIVE_SUFFIX)
+    with open(temp_file_archive.name, "wb") as f:
+        f.write(MOCK_ARCHIVE_CONTENT)
+    archive_mock.return_value = temp_file_archive.name
+
     session_client_mock.return_value.head_object.side_effect = ClientError(
         {"Error": {"Code": "NoSuchKey"}}, "head_object"
     )
 
     is_ancestor_mock.return_value = False
+
     assert s3_remote.s3 == session_client_mock.return_value
+
     res = s3_remote.cmd_push(f"push refs/heads/{BRANCH}:refs/heads/{BRANCH}")
     assert session_client_mock.return_value.put_object.call_count == 3
     assert session_client_mock.return_value.delete_object.call_count == 0
@@ -451,7 +482,7 @@ def test_cmd_push_delete_s3_zip(session_client_mock):
             {
                 "Key": f"test_prefix/refs/heads/{BRANCH}/repo.zip",
                 "LastModified": datetime.datetime.now(),
-            }
+            },
         ]
     }
     assert s3_remote.s3 == session_client_mock.return_value
@@ -499,7 +530,7 @@ def test_cmd_push_delete_fails_with_multiple_heads_s3_zip(session_client_mock):
             {
                 "Key": f"test_prefix/refs/heads/{BRANCH}/repo.zip",
                 "LastModified": datetime.datetime.now(),
-            }
+            },
         ]
     }
     assert s3_remote.s3 == session_client_mock.return_value
