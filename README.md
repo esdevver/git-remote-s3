@@ -17,6 +17,7 @@ It also provide an implementation of the [git-lfs custom transfer](https://githu
   - [Create a new repo](#create-a-new-repo)
   - [Clone a repo](#clone-a-repo)
   - [Branches, etc.](#branches-etc)
+  - [Using S3 remotes for submodules](#using-s3-remotes-for-submodules)
 - [Repo as S3 Source for AWS CodePipeline](#repo-as-s3-source-for-aws-codepipeline)
   - [Archive file location](#archive-file-location)
   - [Example AWS CodePipeline source action config](#example-aws-codepipeline-source-action-config)
@@ -144,6 +145,20 @@ git push origin new_branch
 
 All git operations that do not rely on communication with the server should work as usual (eg `git merge`)
 
+### Using S3 remotes for submodules
+
+If you have a repo that uses submodules also hosted on S3, you need to run the following command:
+
+```
+git config protocol.s3.allow always
+```
+
+Or, to enable globally:
+
+```
+git config --global protocol.s3.allow always
+```
+
 ## Repo as S3 Source for AWS CodePipeline
 
 [AWS CodePipeline](https://aws.amazon.com/codepipeline/) offers an [Amazon S3 source action](https://docs.aws.amazon.com/codepipeline/latest/userguide/integrations-action-type.html#integrations-source-s3)
@@ -165,7 +180,7 @@ Your AWS CodePipeline Action configuration to trigger when you update your `main
 
 - Action Provider: `Amazon S3`
 - Bucket: `my-git-bucket`
-- S3 object key: `s3://my-git-bucket/my-repo my-repo-clone`
+- S3 object key: `my-repo/refs/heads/main/repo.zip`
 - Change detection options: `AWS CodePipeline`
 
 Visit [Tutorial: Create a simple pipeline (S3 bucket)](https://docs.aws.amazon.com/codepipeline/latest/userguide/tutorials-simple-s3.html) to learn more about a S3 bucket as source action.
@@ -177,14 +192,14 @@ To use LFS you need to first install git-lfs. You can refer to the [official doc
 Next, you need enable the S3 integration by running the following command in the repo folder:
 
 ```bash
-lfs-s3-py install
+git-lfs-s3 install
 ```
 
 which is a short cut for:
 
 ```bash
-git config --add lfs.customtransfer.lfs-s3-py.path lfs-s3-py
-git config --add lfs.standalonetransferagent lfs-s3-py
+git config --add lfs.customtransfer.git-lfs-s3.path git-lfs-s3
+git config --add lfs.standalonetransferagent git-lfs-s3
 ```
 
 ### Creating the repo and pushing
@@ -196,7 +211,7 @@ mkdir lfs-repo
 cd lfs-repo
 git init
 git lfs install
-lfs-s3-py install
+git-lfs-s3 install
 git lfs track "*.tiff"
 git add .gitattributes
 <put file.tiff in the repo>
@@ -222,22 +237,8 @@ To fix:
 
 ```bash
 cd lfs-repo-clone
-lfs-s3-py install
+git-lfs-s3 install
 git reset --hard main
-```
-
-### Using S3 remotes for submodules
-
-If you have a repo that uses submodules also hosted on S3, you need to run the following command:
-
-```
-git config protocol.s3.allow always
-```
-
-Or, to enable globally:
-
-```
-git config --global protocol.s3.allow always
 ```
 
 ## Notes about specific behaviors of Amazon S3 remotes
