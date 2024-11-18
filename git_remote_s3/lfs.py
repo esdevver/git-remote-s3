@@ -184,7 +184,7 @@ def main():  # noqa: C901
 
     lfs_process = None
     while True:
-        logger.debug("lfs-s3-py starting")
+        logger.debug("git-lfs-s3 starting")
         line = sys.stdin.readline()
         logger.debug(line)
         event = json.loads(line)
