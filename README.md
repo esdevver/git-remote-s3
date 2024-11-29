@@ -62,7 +62,12 @@ Before you can use `git-remote-s3`, you must:
   {
     "Sid": "S3Access",
     "Effect": "Allow",
-    "Action": ["s3:PutObject", "s3:GetObject", "s3:ListBucket"],
+    "Action": [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:ListBucket",
+      "s3:DeleteObject"
+    ],
     "Resource": ["arn:aws:s3:::<BUCKET>", "arn:aws:s3:::*/*"]
   }
   ```
