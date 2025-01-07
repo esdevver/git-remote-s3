@@ -408,7 +408,11 @@ def test_cmd_push_empty_bucket(
 @patch("git_remote_s3.git.bundle")
 @patch("boto3.Session.client")
 def test_cmd_push_empty_bucket_s3_zip(
-    session_client_mock, bundle_mock, rev_parse_mock, is_ancestor_mock, archive_mock
+    session_client_mock,
+    bundle_mock,
+    rev_parse_mock,
+    is_ancestor_mock,
+    archive_mock,
 ):
     s3_remote = S3Remote(UriScheme.S3_ZIP, None, "test_bucket", "test_prefix")
 
@@ -437,6 +441,61 @@ def test_cmd_push_empty_bucket_s3_zip(
     assert session_client_mock.return_value.put_object.call_count == 3
     assert session_client_mock.return_value.delete_object.call_count == 0
     assert res.startswith("ok")
+
+
+@patch("git_remote_s3.git.archive")
+@patch("git_remote_s3.git.is_ancestor")
+@patch("git_remote_s3.git.rev_parse")
+@patch("git_remote_s3.git.bundle")
+@patch("git_remote_s3.git.get_last_commit_message")
+@patch("boto3.Session.client")
+def test_cmd_push_s3_zip_put_object_params(
+    session_client_mock,
+    get_last_commit_message_mock,
+    bundle_mock,
+    rev_parse_mock,
+    is_ancestor_mock,
+    archive_mock,
+):
+    s3_remote = S3Remote(UriScheme.S3_ZIP, None, "test_bucket", "test_prefix")
+    rev_parse_mock.return_value = SHA1
+    get_last_commit_message_mock.return_value = "test commit message"
+
+    temp_dir = tempfile.mkdtemp("test_temp")
+    temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=BUNDLE_SUFFIX)
+    with open(temp_file.name, "wb") as f:
+        f.write(MOCK_BUNDLE_CONTENT)
+    bundle_mock.return_value = temp_file.name
+
+    temp_file_archive = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=ARCHIVE_SUFFIX)
+    with open(temp_file_archive.name, "wb") as f:
+        f.write(MOCK_ARCHIVE_CONTENT)
+    archive_mock.return_value = temp_file_archive.name
+
+    session_client_mock.return_value.list_objects_v2.side_effect = (
+        create_list_objects_v2_mock(shas=[SHA2])
+    )
+
+    is_ancestor_mock.return_value = True
+
+    res = s3_remote.cmd_push(f"push refs/heads/{BRANCH}:refs/heads/{BRANCH}")
+
+    put_object_calls = session_client_mock.return_value.put_object.call_args_list
+    assert len(put_object_calls) == 2
+
+    # Check bundle upload
+    bundle_call = put_object_calls[0]
+    assert bundle_call.kwargs["Bucket"] == "test_bucket"
+    assert bundle_call.kwargs["Key"].endswith(".bundle")
+
+    # Check zip upload
+    zip_call = put_object_calls[1]
+    assert zip_call.kwargs["Bucket"] == "test_bucket"
+    assert zip_call.kwargs["Key"].endswith("repo.zip")
+    assert (
+        zip_call.kwargs["Metadata"]["codepipeline-artifact-revision-summary"]
+        == "test commit message"
+    )
 
 
 @patch("git_remote_s3.git.is_ancestor")
