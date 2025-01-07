@@ -169,14 +169,19 @@ class S3Remote:
             if self.uri_scheme == UriScheme.S3_ZIP:
                 # Create and push a zip archive next to the bundle file
                 # Example use-case: Repo on S3 as Source for AWS CodePipeline
+                commit_msg = git.get_last_commit_message()
                 temp_file_archive = git.archive(folder=temp_dir, ref=local_ref)
                 with open(temp_file_archive, "rb") as f:
                     self.s3.put_object(
                         Bucket=self.bucket,
                         Key=f"{self.prefix}/{remote_ref}/repo.zip",
                         Body=f,
+                        Metadata={"codepipeline-artifact-revision-summary": commit_msg},
+                        ContentDisposition=f"attachment; filename=repo-{sha[:8]}.zip",
                     )
-                logger.info(f"pushed {temp_file_archive} to {remote_ref}/repo.zip")
+                logger.info(
+                    f"pushed {temp_file_archive} to {self.prefix}/{remote_ref}/repo.zip with message {commit_msg}"
+                )
 
             return f"ok {remote_ref}\n"
         except git.GitError:

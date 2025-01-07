@@ -134,3 +134,13 @@ def validate_ref_name(name: str) -> bool:
         )
         is None
     )
+
+
+def get_last_commit_message() -> str:
+    result = subprocess.run(
+        ["git", "log", "-1", "--pretty=%h %s"], stdout=subprocess.PIPE
+    )
+    if result.returncode != 0:
+        raise GitError(f"fatal: an error as occurred")
+    message = result.stdout.decode("utf8").strip()
+    return message
