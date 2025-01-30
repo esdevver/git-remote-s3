@@ -60,15 +60,27 @@ Before you can use `git-remote-s3`, you must:
 
   ```json
   {
-    "Sid": "S3Access",
-    "Effect": "Allow",
-    "Action": [
-      "s3:PutObject",
-      "s3:GetObject",
-      "s3:ListBucket",
-      "s3:DeleteObject"
-    ],
-    "Resource": ["arn:aws:s3:::<BUCKET>", "arn:aws:s3:::*/*"]
+  	"Version": "2012-10-17",
+  	"Statement": [
+      {
+        "Sid": "S3ObjectAccess",
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ],
+        "Resource": ["arn:aws:s3:::<BUCKET>/*"]
+      },
+      {
+        "Sid": "S3ListAccess",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListBucket",
+        ],
+        "Resource": ["arn:aws:s3:::<BUCKET>"]
+      }
+    ]
   }
   ```
 
@@ -100,6 +112,25 @@ Access control to the remote is ensured via IAM permissions, and can be controll
 - bucket level
 - prefix level (you can use prefixes to store multiple repos in the same S3 bucket thus minimizing the setup effort)
 - KMS key level
+
+If you store multiple repos in a single bucket but would like to spearate permissions to access each repo, you can do so by modifying the resource definition in the policy to specify the repo prefix:
+
+```json
+      {
+        "Sid": "S3ObjectAccess",
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ],
+        "Resource": ["arn:aws:s3:::<BUCKET>/<REPO>/*"]
+      },
+```
+
+Be aware that this would not prevent users with permissions on other repos to list the content of any repo of the bucket. This is because the `s3:ListBucket` permission, which is required for the correct operation of the tool, is scoped at the bucket level.
+
+If an higher level of isolation is required, the solution is to use different buckets.
 
 ## Use S3 remotes
 
