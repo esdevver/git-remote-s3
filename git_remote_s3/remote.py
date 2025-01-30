@@ -29,7 +29,7 @@ if "remote" in __name__:
 class BucketNotFoundError(Exception):
     def __init__(self, bucket: str):
         self.bucket = bucket
-        super().__init__(f"Bucket {bucket} not found or user not authorized.")
+        super().__init__(f"Bucket {bucket} not found.")
 
 
 class NotAuthorizedError(Exception):
@@ -60,7 +60,11 @@ class S3Remote:
         try:
             self.s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
         except ClientError as e:
-            raise BucketNotFoundError(bucket)
+            if e.response["Error"]["Code"] == "NoSuchBucket":
+                raise BucketNotFoundError(bucket)
+            if e.response["Error"]["Code"] == "AccessDenied":
+                raise NotAuthorizedError("ListObjectsV2", bucket)
+            raise e
 
         self.bucket = bucket
         self.mode = None
@@ -110,7 +114,7 @@ class S3Remote:
         except ClientError as e:
             if e.response["Error"]["Code"] == "AccessDenied":
                 raise NotAuthorizedError("GetObject", self.bucket)
-            logger.info(e)
+            raise e
         finally:
             if os.path.exists(f"{temp_dir}/{sha}.bundle"):
                 os.remove(f"{temp_dir}/{sha}.bundle")
@@ -387,7 +391,7 @@ def main():
         sys.stderr.flush()
         sys.exit(1)
     except BucketNotFoundError as e:
-        sys.stderr.write(f"fatal: bucket not found {e.bucket} or user not authorized\n")
+        sys.stderr.write(f"fatal: bucket not found {e.bucket}\n")
         sys.stderr.flush()
         sys.exit(1)
     except NotAuthorizedError as e:
@@ -397,6 +401,7 @@ def main():
         sys.stderr.flush()
         sys.exit(1)
     except Exception as e:
+        logger.info(e)
         sys.stderr.write(
             f"fatal: unknown error. Run with --verbose flag to get full log\n"
         )
