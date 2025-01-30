@@ -60,24 +60,18 @@ Before you can use `git-remote-s3`, you must:
 
   ```json
   {
-  	"Version": "2012-10-17",
-  	"Statement": [
+    "Version": "2012-10-17",
+    "Statement": [
       {
         "Sid": "S3ObjectAccess",
         "Effect": "Allow",
-        "Action": [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:DeleteObject"
-        ],
+        "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
         "Resource": ["arn:aws:s3:::<BUCKET>/*"]
       },
       {
         "Sid": "S3ListAccess",
         "Effect": "Allow",
-        "Action": [
-          "s3:ListBucket",
-        ],
+        "Action": ["s3:ListBucket"],
         "Resource": ["arn:aws:s3:::<BUCKET>"]
       }
     ]
@@ -113,7 +107,7 @@ Access control to the remote is ensured via IAM permissions, and can be controll
 - prefix level (you can use prefixes to store multiple repos in the same S3 bucket thus minimizing the setup effort)
 - KMS key level
 
-If you store multiple repos in a single bucket but would like to spearate permissions to access each repo, you can do so by modifying the resource definition in the policy to specify the repo prefix:
+If you store multiple repos in a single bucket but would like to separate permissions to access each repo, you can do so by modifying the resource definitions for the object related action to specify the repo prefix and by adding a condition to the ListBucket action to restrict the operation to matching prefixes (and by consequence the corresponding repo) :
 
 ```json
       {
@@ -126,11 +120,22 @@ If you store multiple repos in a single bucket but would like to spearate permis
         ],
         "Resource": ["arn:aws:s3:::<BUCKET>/<REPO>/*"]
       },
+      {
+        "Sid": "S3ListObjects",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListBucket",
+        ],
+        "Condition": {
+          "StringEquals": {
+            "s3:prefix": "<REPO>"
+          }
+        },
+        "Resource": ["arn:aws:s3:::<BUCKET>"]
+      },
 ```
 
-Be aware that this would not prevent users with permissions on other repos to list the content of any repo of the bucket. This is because the `s3:ListBucket` permission, which is required for the correct operation of the tool, is scoped at the bucket level.
-
-If an higher level of isolation is required, the solution is to use different buckets.
+Using the condition key restricts the access operation to the content of the specific repo in the bucket.
 
 ## Use S3 remotes
 
@@ -198,7 +203,7 @@ git config --global protocol.s3.allow always
 ## Repo as S3 Source for AWS CodePipeline
 
 [AWS CodePipeline](https://aws.amazon.com/codepipeline/) offers an [Amazon S3 source action](https://docs.aws.amazon.com/codepipeline/latest/userguide/integrations-action-type.html#integrations-source-s3)
-as location for your source code and application files. But this requires to `uploade the source files as a single ZIP file`.
+as location for your source code and application files. But this requires to `upload the source files as a single ZIP file`.
 As briefly mentioned in [Create a new repo](#create-a-new-repo), `git-remote-s3` can create and upload zip archives.
 When you use `s3+zip` as URI Scheme when you add the remote, `git-remote-s3` will automatically upload an archive that can be used by AWS CodePipeline.
 

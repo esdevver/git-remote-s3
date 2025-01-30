@@ -27,9 +27,18 @@ if "remote" in __name__:
 
 
 class BucketNotFoundError(Exception):
-    def __init__(self, bucket):
+    def __init__(self, bucket: str):
         self.bucket = bucket
         super().__init__(f"Bucket {bucket} not found.")
+
+
+class NotAuthorizedError(Exception):
+    def __init__(self, action: str, bucket: str):
+        self.bucket = bucket
+        self.action = action
+        super().__init__(
+            f"Not authorized to perform {action} on the S3 bucket {bucket}."
+        )
 
 
 class Mode:
@@ -49,11 +58,14 @@ class S3Remote:
             self.session = boto3.Session()
         self.s3 = self.session.client("s3")
         try:
-            self.s3.head_bucket(Bucket=bucket)
+            self.s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
         except ClientError as e:
-            if e.response["Error"]["Code"] == "404":
+            if e.response["Error"]["Code"] == "NoSuchBucket":
                 raise BucketNotFoundError(bucket)
+            if e.response["Error"]["Code"] == "AccessDenied":
+                raise NotAuthorizedError("ListObjectsV2", bucket)
             raise e
+
         self.bucket = bucket
         self.mode = None
         self.fetched_refs = []
@@ -87,18 +99,22 @@ class S3Remote:
             return
         logger.info(f"fetch {sha} {ref}")
         try:
+            temp_dir = tempfile.mkdtemp(prefix="git_remote_s3_fetch_")
             obj = self.s3.get_object(
                 Bucket=self.bucket, Key=f"{self.prefix}/{ref}/{sha}.bundle"
             )
             data = obj["Body"].read()
 
-            temp_dir = tempfile.mkdtemp(prefix="git_remote_s3_fetch_")
             with open(f"{temp_dir}/{sha}.bundle", "wb") as f:
                 f.write(data)
             logger.info(f"fetched {temp_dir}/{sha}.bundle {ref}")
 
             git.unbundle(folder=temp_dir, sha=sha, ref=ref)
             self.fetched_refs.append(sha)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "AccessDenied":
+                raise NotAuthorizedError("GetObject", self.bucket)
+            raise e
         finally:
             if os.path.exists(f"{temp_dir}/{sha}.bundle"):
                 os.remove(f"{temp_dir}/{sha}.bundle")
@@ -376,5 +392,18 @@ def main():
         sys.exit(1)
     except BucketNotFoundError as e:
         sys.stderr.write(f"fatal: bucket not found {e.bucket}\n")
+        sys.stderr.flush()
+        sys.exit(1)
+    except NotAuthorizedError as e:
+        sys.stderr.write(
+            f"fatal: user not authorized to perform {e.action} on {e.bucket}\n"
+        )
+        sys.stderr.flush()
+        sys.exit(1)
+    except Exception as e:
+        logger.info(e)
+        sys.stderr.write(
+            f"fatal: unknown error. Run with --verbose flag to get full log\n"
+        )
         sys.stderr.flush()
         sys.exit(1)
