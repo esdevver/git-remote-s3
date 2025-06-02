@@ -131,6 +131,18 @@ class LFSProcess:
         sys.stdout.flush()
 
 
+def first_git_config_key(keys):
+    for key in keys:
+        result = subprocess.run(
+            ["git", "config", "get", key],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        if result.returncode == 0:
+            return result.stdout.decode("utf-8").strip()
+    return None
+
+
 def install():
     result = subprocess.run(
         ["git", "config", "--add", "lfs.customtransfer.git-lfs-s3.path", "git-lfs-s3"],
@@ -196,12 +208,9 @@ def main():  # noqa: C901
                 sys.stdout.write("{}\n")
                 sys.stdout.flush()
                 sys.exit(1)
-            result = subprocess.run(
-                ["git", "remote", "get-url", event["remote"]],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            if result.returncode != 0:
+            # input(str([f"remote.{event["remote"]}.lfspushurl", f"remote.{event["remote"]}.lfsurl", "lfs.pushurl", "lfs.url"]))
+            result = first_git_config_key([f"remote.{event["remote"]}.lfspushurl", f"remote.{event["remote"]}.lfsurl", "lfs.pushurl", "lfs.url"])
+            if result == None:
                 logger.error(result.stderr.decode("utf-8").strip())
                 error_event = {
                     "error": {
@@ -212,7 +221,7 @@ def main():  # noqa: C901
                 sys.stdout.write(f"{json.dumps(error_event)}")
                 sys.stdout.flush()
                 sys.exit(1)
-            s3uri = result.stdout.decode("utf-8").strip()
+            s3uri = result
             lfs_process = LFSProcess(s3uri=s3uri)
 
         elif event["event"] == "upload":
